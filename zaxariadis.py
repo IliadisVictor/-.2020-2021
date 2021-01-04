@@ -59,7 +59,7 @@ class Route:
     def __init__(self, dp, cap):
         self.sequenceOfNodes = []
         self.sequenceOfNodes.append(dp)
-        self.time = 0
+        self.time = s.calculateRouteTime(self)
         self.capacity = cap
         self.load = 0
 
@@ -197,7 +197,7 @@ class Solver:
                     iwannatrymore = True
                     tries = 1
                 while iwannatrymore is True and tries <= 6 and uvispol and min(yaw) != 500:
-                    print(ind+1, load, time)
+                    #print(ind+1, load, time)
                     if load <= croute.capacity and time <= timebarrier:
                         #print("firstif")
                         croute.sequenceOfNodes.append(findNodeWithID(ind+1))
@@ -210,7 +210,7 @@ class Solver:
                             routes.append(croute)
                         iwannatrymore = False
                     else:
-                        print("else")
+                        #print("else")
                         #print("firstelse")
                         if load > cap and tries <= 5:
                             #print("sif")
@@ -230,7 +230,6 @@ class Solver:
                             croute.time = time
                             routes.append(croute)
                             load = croute.capacity
-                            ccluster = []
                             iwannatrymore = False
                 #print([node.id for node in croute.sequenceOfNodes], ind+1, load, time)
 
@@ -238,6 +237,71 @@ class Solver:
         croute.load = load
         croute.time = time
         routes.append(croute)
+
+
+        return routes
+
+
+
+    def calculateRouteTime(self, route):
+        time = 0
+        span = len(route.sequenceOfNodes)
+        for i in range(span-1):
+            thisid = route.sequenceOfNodes[i].id
+            nextid = route.sequenceOfNodes[i + 1].id
+            time += self.deliverytime[thisid][nextid - 1]
+
+            #print(self.deliverytime[thisid][nextid - 1])
+        return time
+
+    def twoOptSwap(self, route, i, k):
+        routepiecetoreverse = []
+        routepiecereversed = []
+        for j in range(i, k):
+            routepiecetoreverse.append(route.sequenceOfNodes[j])
+        for node in reversed(routepiecetoreverse):
+            routepiecereversed.append(node)
+        ri = 0
+        for j in range(i, k):
+            route.sequenceOfNodes[j] = routepiecereversed[ri]
+            ri += 1
+        return route
+
+
+
+
+
+
+
+    def twoOPt(self):
+        tryingroutes = sol.copy()
+        newroutes = []
+        for route in tryingroutes:
+            noimprovement = False
+            eligible = len(route.sequenceOfNodes)
+            existing_route = route
+            while noimprovement is False:
+                existing_route_time = self.calculateRouteTime(existing_route)
+                toBeBroken = False
+                for i in range(1, eligible):
+                    if toBeBroken is True:
+                        break
+                    for k in range(i + 1, eligible + 1):
+                        new_route = self.twoOptSwap(existing_route, i, k)
+                        new_route_time = self.calculateRouteTime(new_route)
+                        if (new_route_time < existing_route_time):
+                            existing_route = new_route
+                            existing_route_time = new_route_time
+                            noimprovement = False
+                            toBeBroken = True
+                            break
+                        else:
+                            noimprovement = True
+            newroutes.append(existing_route)
+        return newroutes
+
+
+
         """
         loo = 0
         times = []
@@ -256,8 +320,7 @@ class Solver:
         print(loo)
         print(max(times))
         """
-        self.sol = routes
-        return self.sol
+
 
 m = Model()
 m.BuildModel()
@@ -265,11 +328,23 @@ s = Solver(m)
 sol = s.sweepMethod()
 
 
+timesold = []
+for route in sol:
+    timesold.append(s.calculateRouteTime(route))
+    #print(route.time)
+print(max(timesold))
 
+new_sol = s.twoOPt()
+
+times = []
+for route in new_sol:
+    #print("route time", route.time)
+    #print(s.calculateRouteTime(route))
+    times.append(route.time)
+print(max(times))
 
 
 """
-
 
 
 
@@ -284,5 +359,5 @@ for node in anglingNodes:
     prt_width(node.y)
     prt_width(node.demand)
     prt_width(node.type)
-    print('\n') 
+    print('\n')
 """
