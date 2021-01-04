@@ -284,5 +284,5 @@ for node in anglingNodes:
     prt_width(node.y)
     prt_width(node.demand)
     prt_width(node.type)
-    print('\n')
+    print('\n') 
 """
