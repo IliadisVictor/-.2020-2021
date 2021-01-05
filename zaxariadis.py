@@ -59,7 +59,7 @@ class Route:
     def __init__(self, dp, cap):
         self.sequenceOfNodes = []
         self.sequenceOfNodes.append(dp)
-        self.time = s.calculateRouteTime(self)
+        self.time = 0
         self.capacity = cap
         self.load = 0
 
@@ -244,15 +244,15 @@ class Solver:
 
 
     def calculateRouteTime(self, route):
-        time = 0
+        caltime = 0
+        nodid=[]
         span = len(route.sequenceOfNodes)
         for i in range(span-1):
             thisid = route.sequenceOfNodes[i].id
             nextid = route.sequenceOfNodes[i + 1].id
-            time += self.deliverytime[thisid][nextid - 1]
-
+            caltime += self.deliverytime[thisid][nextid - 1]
             #print(self.deliverytime[thisid][nextid - 1])
-        return time
+        return caltime
 
     def twoOptSwap(self, route, i, k):
         routepiecetoreverse = []
@@ -273,7 +273,7 @@ class Solver:
 
 
 
-    def twoOPt(self):
+    def twoOpt(self):
         tryingroutes = sol.copy()
         newroutes = []
         for route in tryingroutes:
@@ -292,11 +292,18 @@ class Solver:
                         if (new_route_time < existing_route_time):
                             existing_route = new_route
                             existing_route_time = new_route_time
+                            existing_route.time = self.calculateRouteTime(new_route)
                             noimprovement = False
                             toBeBroken = True
                             break
                         else:
                             noimprovement = True
+            '''
+            print("route")
+            for nodes in existing_route.sequenceOfNodes:
+                print(nodes.id)
+            print(existing_route.time, existing_route_time)
+            '''
             newroutes.append(existing_route)
         return newroutes
 
@@ -326,22 +333,11 @@ m = Model()
 m.BuildModel()
 s = Solver(m)
 sol = s.sweepMethod()
+new_sol = s.twoOpt()
 
 
-timesold = []
-for route in sol:
-    timesold.append(s.calculateRouteTime(route))
-    #print(route.time)
-print(max(timesold))
 
-new_sol = s.twoOPt()
 
-times = []
-for route in new_sol:
-    #print("route time", route.time)
-    #print(s.calculateRouteTime(route))
-    times.append(route.time)
-print(max(times))
 
 
 """
