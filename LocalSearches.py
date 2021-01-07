@@ -111,3 +111,11 @@ def relocatefrommax(relroutes):
                 targetroute.load += B.demand
                 del originroute.sequenceOfNodes[keeporiginnode]
                 targetroute.sequenceOfNodes.insert(keeptargetnode + 1, B)
+                
+ def calcroutecost(rt):
+    routecost=0
+    for j in range(0, len(rt.sequenceOfNodes) - 1):
+        k = rt.sequenceOfNodes[j].id
+        l = rt.sequenceOfNodes[j + 1].id
+        routecost = routecost + dist_matrix[k][l]
+    return routecost
