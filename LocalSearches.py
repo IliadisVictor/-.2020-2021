@@ -119,3 +119,15 @@ def relocatefrommax(relroutes):
         l = rt.sequenceOfNodes[j + 1].id
         routecost = routecost + dist_matrix[k][l]
     return routecost
+
+
+
+dist_matrix = [[0.0 for j in range(0, len(all_nodes))] for k in range(0, len(all_nodes))]
+for i in range(0, len(all_nodes)):
+    for j in range(0, len(all_nodes)):
+        source = all_nodes[i]
+        target = all_nodes[j]
+        dx_2 = (source.x - target.x)**2
+        dy_2 = (source.y - target.y) ** 2
+        dist = round(math.sqrt(dx_2 + dy_2))
+        dist_matrix[i][j] = dist / 35 + 5/60 + (all_nodes[j].type - 1) * 10/60
