@@ -1,45 +1,81 @@
-    def SwapMoveAllChanges(self, route_of_max_cost):
+        def SwapMoveAllChanges(self, route_of_max_cost):
         rt1: Route = route_of_max_cost
-        for second_route in range(0, len(self.sol.routes) - 1):
+        for second_route in range(0, len(self.sol.routes)):
             rt2: Route = self.sol.routes[second_route]
-            for first_route_node in range(1, len(rt1.sequenceOfNodes) - 1):
+            for first_route_node in range(1, len(rt1.sequenceOfNodes)):
                 fn = rt1.sequenceOfNodes[first_route_node]
                 startOfSecondNodeIndex = 1
                 if rt1 == rt2:
-                    startOfSecondNodeIndex = first_route_node + 1
-                for second_route_node in range(startOfSecondNodeIndex, len(rt2.sequenceOfNodes) - 1):
+                    if first_route_node != len(rt1.sequenceOfNodes) - 1:
+                        startOfSecondNodeIndex = first_route_node + 1
+                    else:
+                        break
+                for second_route_node in range(startOfSecondNodeIndex, len(rt2.sequenceOfNodes)):
                     sn = rt2.sequenceOfNodes[second_route_node]
                     A = rt1.sequenceOfNodes[first_route_node - 1]
-                    B = rt1.sequenceOfNodes[first_route_node + 1]
+                    if first_route_node == len(rt1.sequenceOfNodes) - 1:
+                        B = fn
+                    else:
+                        B = rt1.sequenceOfNodes[first_route_node + 1]
                     C = rt2.sequenceOfNodes[second_route_node - 1]
-                    D = rt2.sequenceOfNodes[second_route_node + 1]
+                    if second_route_node == len(rt2.sequenceOfNodes) - 1:
+                        D = sn
+                    else:
+                        D = rt2.sequenceOfNodes[second_route_node + 1]
                     rt1_removed_demand = fn.demand
                     rt1_added_demand = sn.demand
                     rt2_removed_demand = sn.demand
                     rt2_added_demand = fn.demand
-                    if rt1.capacity - rt1_removed_demand + rt1_added_demand >= 0 and rt2.capacity - rt2_removed_demand + rt2_added_demand >= 0:
-                        rt1_cost_before = rt1.cost
-                        rt1_removed_cost = self.distanceMatrix[A.id][fn.id]
-                        rt1_added_cost = self.distanceMatrix[A.id][sn.id]
-                        rt1_cost_after = rt1_cost_before - rt1_removed_cost + rt1_added_cost
-                        rt2_cost_before = rt2.cost
-                        rt2_removed_cost = self.distanceMatrix[C.id][sn.id]
-                        rt2_added_cost = self.distanceMatrix[C.id][fn.id]
-                        rt2_cost_after = rt2_cost_before - rt2_removed_cost + rt2_added_cost
-                        if rt1_cost_before > rt1_cost_after > rt2_cost_after and rt2_cost_after < rt1_cost_before:
-                            # print(max_cost1, max_cost2)
+                    if rt1 == rt2:
+                        rt1_removed_demand = fn.demand + sn.demand
+                        rt1_added_demand = fn.demand + sn.demand
+                        rt2_removed_demand = fn.demand + sn.demand
+                        rt2_added_demand = fn.demand + sn.demand
+                    rt1_capacity = rt1.capacity - rt1_removed_demand + rt1_added_demand
+                    rt2_capacity = rt2.capacity - rt2_removed_demand + rt2_added_demand
+                    rt1_load = rt1.load - rt1_removed_demand + rt1_added_demand
+                    rt2_load = rt2.load - rt2_removed_demand + rt2_added_demand
+                    if rt1_capacity + rt1_load == 3000 and rt2_capacity + rt2_load == 3000:
+                        rt1_cost_before = rt1.time
+                        rt_cost_after = rt1_cost_before
+                        if rt1 == rt2:
+                            rt_cost_before = rt1.time
+                            if first_route_node < second_route_node and B.id == sn.id and C.id == fn.id:
+                                rt_removed_cost = self.distanceMatrix[A.id][fn.id] + self.distanceMatrix[sn.id][
+                                    D.id] + self.distanceMatrix[fn.id][sn.id]
+                                rt_added_cost = self.distanceMatrix[A.id][sn.id] + self.distanceMatrix[fn.id][
+                                    D.id] + self.distanceMatrix[sn.id][fn.id]
+                                rt_cost_after = rt_cost_before - rt_removed_cost + rt_added_cost
+                                rt1_cost_after = rt_cost_after
+                                rt2_cost_after = rt_cost_after
+                            # if first_route_node > second_route_node and A.id == sn.id and D.id == fn.id:
+                            #     rt_removed_cost = self.distanceMatrix[C.id][sn.id] + self.distanceMatrix[fn.id][B.id]
+                            #     rt_added_cost = self.distanceMatrix[C.id][fn.id] + self.distanceMatrix[sn.id][B.id]
+                            #     rt_cost_after = rt_cost_before - rt_removed_cost + rt_added_cost
+                            #     rt1_cost_after = rt_cost_after
+                            #     rt2_cost_after = rt_cost_after
+                        else:
+                            rt1_removed_cost = self.distanceMatrix[A.id][fn.id] + self.distanceMatrix[fn.id][B.id]
+                            rt1_added_cost = self.distanceMatrix[A.id][sn.id] + self.distanceMatrix[sn.id][B.id]
+                            rt1_cost_after = rt1_cost_before - rt1_removed_cost + rt1_added_cost
+                            rt2_cost_before = rt2.time
+                            rt2_removed_cost = self.distanceMatrix[C.id][sn.id] + self.distanceMatrix[sn.id][D.id]
+                            rt2_added_cost = self.distanceMatrix[C.id][fn.id] + self.distanceMatrix[fn.id][D.id]
+                            rt2_cost_after = rt2_cost_before - rt2_removed_cost + rt2_added_cost
+                        if rt1_cost_before > rt1_cost_after > rt2_cost_after or rt_cost_after < rt1_cost_before:
                             for i in range(len(self.sol.routes)):
+
                                 if self.sol.routes[i] == rt1:
-                                    for j in range(len(self.sol.routes[i].sequenceOfNodes)):
-                                        if self.sol.routes[i].sequenceOfNodes[j] == fn.id:
-                                            self.sol.routes[i].sequenceOfNodes[j] = sn
+                                    self.sol.routes[i].sequenceOfNodes[first_route_node] = sn
                                     self.sol.routes[i].cost = rt1_cost_after
-                                    self.sol.routes[i].capacity = self.sol.routes[i].capacity - fn.demand + sn.demand
-                                    self.sol.routes[i].load = self.sol.routes[i].load - fn.demand + sn.demand
-                                elif self.sol.routes[i] == rt2:
-                                    for j in range(len(self.sol.routes[i].sequenceOfNodes)):
-                                        if self.sol.routes[i].sequenceOfNodes[j] == sn.id:
-                                            self.sol.routes[i].sequenceOfNodes[j] = fn
+                                    self.sol.routes[i].capacity = self.sol.routes[
+                                                                      i].capacity - rt1_removed_demand + rt1_added_demand
+                                    self.sol.routes[i].load = self.sol.routes[
+                                                                  i].load - rt1_removed_demand + rt1_added_demand
+                                if self.sol.routes[i] == rt2:
+                                    self.sol.routes[i].sequenceOfNodes[second_route_node] = fn
                                     self.sol.routes[i].cost = rt2_cost_after
-                                    self.sol.routes[i].capacity = self.sol.routes[i].capacity - sn.demand + fn.demand
-                                    self.sol.routes[i].load = self.sol.routes[i].load - sn.demand + fn.demand
+                                    self.sol.routes[i].capacity = self.sol.routes[
+                                                                      i].capacity - rt2_removed_demand + rt2_added_demand
+                                    self.sol.routes[i].load = self.sol.routes[
+                                                                  i].load - rt2_removed_demand + rt2_added_demand
