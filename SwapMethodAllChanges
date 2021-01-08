@@ -1,4 +1,4 @@
-        def SwapMoveAllChanges(self, route_of_max_cost):
+def SwapMoveAllChanges(self, route_of_max_cost):
         rt1: Route = route_of_max_cost
         for second_route in range(0, len(self.sol.routes)):
             rt2: Route = self.sol.routes[second_route]
