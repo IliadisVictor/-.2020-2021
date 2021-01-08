@@ -3,7 +3,7 @@ import math
 import pprint
 import random
 from Solution_Drawer import SolDrawer
-
+from tests import testsol
 
 class Node:
  def __init__(self, id, tp, dem, xx, yy):
@@ -18,6 +18,7 @@ class Model:
         self.all_nodes = []
         self.service_locations = []
         self.dist_matrix = []
+        self.distMatrix = []
         self.deliverytime = {}
         self.capacity = -1
 
@@ -57,6 +58,17 @@ class Model:
                 timetonodes.append(timetonode)
             self.deliverytime[self.all_nodes[i].id] = timetonodes
 
+        self.distMatrix = [[0.0 for j in range(0, len(self.all_nodes))] for k in range(0, len(self.all_nodes))]
+        for i in range(0, len(self.all_nodes)):
+            for j in range(0, len(self.all_nodes)):
+                source = self.all_nodes[i]
+                target = self.all_nodes[j]
+                dx_2 = (source.x - target.x) ** 2
+                dy_2 = (source.y - target.y) ** 2
+                dist = round(math.sqrt(dx_2 + dy_2))
+                self.distMatrix[i][j] = dist / 35 + 5 / 60 + (self.all_nodes[j].type - 1) * 10 / 60
+
+
 class Route:
     def __init__(self, dp, cap):
         self.sequenceOfNodes = []
@@ -69,27 +81,13 @@ class Route:
 
 
 
-"""
-import sys
-def prt_width(myint):
-    sys.stdout.write('|' + str(myint) + '|' + ' '*(3 - len(str(myint))) + '  ')
-    sys.stdout.flush()
-
-for node in all_nodes:
-    prt_width(node.id)
-    prt_width(node.x)
-    prt_width(node.y)
-    prt_width(node.demand)
-    prt_width(node.type)
-    print('\n')
-"""
-
 class Solution:
     def __init__(self):
         self.cost = 0.0
         self.routes = []
 
 class Solver:
+
     def __init__(self, m):
         self.all_nodes = m.all_nodes
         self.service_locations = m.service_locations
@@ -98,12 +96,14 @@ class Solver:
         self.dist_matrix = m.dist_matrix
         self.capacity = m.capacity
         self.sol = None
+        self.distanceMatrix = m.distMatrix
 
 
 
 
 
-    def sweepMethod(self):
+
+    def sweepMethod(self, method):
         anglingNodes = []
         polarsOfAngling = []
         def convertCoordinates():
@@ -149,6 +149,13 @@ class Solver:
         convertCoordinates()
         findPolarAngle()
 
+        """
+        def preferenceValues(id):
+            for node in polarsOfAngling:
+                if math.fabs(polarsOfAngling[node][1] - polarsOfAngling[id][1]):
+                        
+        """
+
         def findNodeWithID(id):
             for node in self.all_nodes:
                 if node.id == id:
@@ -173,12 +180,11 @@ class Solver:
         
         findPrefValue()
         """
+        yaw = [0]
         visited = []
         routes = []
         uvispol = polarsOfAngling.copy()
         uvispol.pop(0)
-        timebarrier = 4.66
-        yaw = [1]
         while len(visited) < 200:
             cap = self.capacity
             time = 0
@@ -190,64 +196,105 @@ class Solver:
             load += self.service_locations[uvispol[0][0]-1].demand
             time += self.deliverytime[0][uvispol[0][0]-1]
             uvispol.pop(0)
-            while load < croute.capacity and time < timebarrier and min(yaw) != 500:
-                yaw = self.dist_matrix[croute.sequenceOfNodes[-1].id].copy()
-                yaw.pop(0)
-                yaw[croute.sequenceOfNodes[-1].id - 1] = 500
-                for i in range(1, 201):
-                    if i in visited:
-                        yaw[i - 1] = 500
+            if method == "nearest":
+                timebarrier = 4.66
+                while load < croute.capacity and time < timebarrier and min(yaw) != 500:
+                    yaw = self.dist_matrix[croute.sequenceOfNodes[-1].id].copy()
+                    yaw.pop(0)
+                    yaw[croute.sequenceOfNodes[-1].id - 1] = 500
+                    for i in range(1, 201):
+                        if i in visited:
+                            yaw[i - 1] = 500
 
-                ind = yaw.index(min(yaw))
-                if min(yaw) != 500:
-                    load += self.service_locations[ind].demand
-                    time += self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
-                    iwannatrymore = True
-                    tries = 1
-                while iwannatrymore is True and tries <= 6 and uvispol and min(yaw) != 500:
-                    #print(ind+1, load, time)
-                    if load <= croute.capacity and time <= timebarrier:
-                        #print("firstif")
-                        croute.sequenceOfNodes.append(findNodeWithID(ind+1))
-                        visited.append(ind+1)
-                        #print(ind+1)
-                        uvispol.remove([tuple(tuple_tbr) for tuple_tbr in uvispol if tuple_tbr[0] == ind+1][-1])
-                        if load == croute.capacity or time == timebarrier:
-                            croute.load = load
-                            croute.time = time
-                            routes.append(croute)
-                        iwannatrymore = False
-                    else:
-                        #print("else")
-                        #print("firstelse")
-                        if load > cap and tries <= 5:
-                            #print("sif")
-                            load -= self.service_locations[ind].demand
-                            time -= self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
-                            yaw[ind] = 500
-                            if min(yaw) != 500:
-                                ind = yaw.index(min(yaw))
-                                load += self.service_locations[ind].demand
-                                time += self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
-                            tries += 1
-                        else:
-                            #print("selse")
-                            load -= self.service_locations[ind].demand
-                            time -= self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
-                            croute.load = load
-                            croute.time = time
-                            routes.append(croute)
-                            load = croute.capacity
+                    ind = yaw.index(min(yaw))
+                    if min(yaw) != 500:
+                        load += self.service_locations[ind].demand
+                        time += self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
+                        iwannatrymore = True
+                        tries = 1
+                    while iwannatrymore is True and tries <= 6 and uvispol and min(yaw) != 500:
+                        #print(ind+1, load, time)
+                        if load <= croute.capacity and time <= timebarrier:
+                            #print("firstif")
+                            croute.sequenceOfNodes.append(findNodeWithID(ind+1))
+                            visited.append(ind+1)
+                            #print(ind+1)
+                            uvispol.remove([tuple(tuple_tbr) for tuple_tbr in uvispol if tuple_tbr[0] == ind+1][-1])
+                            if load == croute.capacity or time == timebarrier:
+                                croute.load = load
+                                croute.time = time
+                                routes.append(croute)
                             iwannatrymore = False
-                #print([node.id for node in croute.sequenceOfNodes], ind+1, load, time)
+                        else:
+                            #print("else")
+                            #print("firstelse")
+                            if load > cap and tries <= 5:
+                                #print("sif")
+                                load -= self.service_locations[ind].demand
+                                time -= self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
+                                yaw[ind] = 500
+                                if min(yaw) != 500:
+                                    ind = yaw.index(min(yaw))
+                                    load += self.service_locations[ind].demand
+                                    time += self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
+                                tries += 1
+                            else:
+                                #print("selse")
+                                load -= self.service_locations[ind].demand
+                                time -= self.deliverytime[croute.sequenceOfNodes[-1].id][ind]
+                                croute.load = load
+                                croute.time = time
+                                routes.append(croute)
+                                load = croute.capacity
+                                iwannatrymore = False
+                    #print([node.id for node in croute.sequenceOfNodes], ind+1, load, time)
+            elif method == "polar":
+                timebarrier = 7
+                while len(visited) < 200:
+                    croute.sequenceOfNodes.append(findNodeWithID(uvispol[0][0]))
+                    visited.append(uvispol[0][0])
+                    load += self.service_locations[uvispol[0][0] - 1].demand
+                    time = self.calculateRouteTime(croute)
+                    uvispol.pop(0)
+                    if uvispol:
+                        next_time = time + self.deliverytime[croute.sequenceOfNodes[-1].id][uvispol[0][0] - 1]
+                        #if len(routes) == 11:
+                            #print(time, next_time)
+                        next_load = load + self.service_locations[uvispol[0][0] - 1].demand
+                    if next_load > croute.capacity or next_time > timebarrier:
+                            croute.load = load
+                            croute.time = time
+                            routes.append(croute)
+                            break
+            """
+            else:
+                timebarrier = 10
+                while len(visited) < 200:
+                    croute.sequenceOfNodes.append(findNodeWithID(self.dist_matrix.index(min(self.dist_matrix[0]))[1]))
+                    visited.append(uvispol[0][0])
+                    load += self.service_locations[uvispol[0][0] - 1].demand
+                    time = self.calculateRouteTime(croute)
+                    uvispol.pop(0)
+                    if uvispol:
+                        next_time = time + self.deliverytime[croute.sequenceOfNodes[-1].id][uvispol[0][0] - 1]
+                        #if len(routes) == 11:
+                            #print(time, next_time)
+                        next_load = load + self.service_locations[uvispol[0][0] - 1].demand
+                    if next_load > croute.capacity or next_time > timebarrier:
+                            croute.load = load
+                            croute.time = time
+                            routes.append(croute)
+                            break
+            """
 
 
         croute.load = load
         croute.time = time
         routes.append(croute)
-
-
         return routes
+
+
+
 
 
 
@@ -274,6 +321,75 @@ class Solver:
             route.sequenceOfNodes[j] = copy.deepcopy(routepiecereversed[ri])
             ri += 1
         return route
+
+
+    def calcroutecost(self, rt):
+        routecost = 0
+        for j in range(0, len(rt.sequenceOfNodes) - 1):
+            k = rt.sequenceOfNodes[j].id
+            l = rt.sequenceOfNodes[j + 1].id
+            routecost = routecost + self.deliverytime[k][l-1]
+        return routecost
+
+    def swapLocalSearch(self, inputroutes):
+        for i in range(0, 200):
+            maxroute = 0
+            maxvalue = 0
+            for i in range(0, len(inputroutes)):
+                rt = inputroutes[i]
+                if maxvalue < rt.time:
+                    maxroute = i
+                    maxvalue = rt.time
+            movereducal = 0
+            foundreplacement = False
+            for secondRouteIndex in range(0, len(inputroutes)):
+                rt2: Route = inputroutes[secondRouteIndex]
+                if inputroutes[maxroute] == rt2:
+                    continue
+                for firstNodeIndex in range(1, len(inputroutes[maxroute].sequenceOfNodes)):
+                    for secondNodeIndex in range(1, len(rt2.sequenceOfNodes)):
+                        b1 = inputroutes[maxroute].sequenceOfNodes[firstNodeIndex]
+                        b2 = rt2.sequenceOfNodes[secondNodeIndex]
+                        if inputroutes[maxroute].load - b1.demand + b2.demand > 3000:
+                            continue
+                        if rt2.load - b2.demand + b1.demand > 3000:
+                            continue
+
+                        origincost = 0
+                        targetcost = 0
+
+                        a1 = inputroutes[maxroute].sequenceOfNodes[firstNodeIndex - 1]
+                        a2 = rt2.sequenceOfNodes[secondNodeIndex - 1]
+                        if firstNodeIndex != len(inputroutes[maxroute].sequenceOfNodes) - 1:
+                            c1 = inputroutes[maxroute].sequenceOfNodes[firstNodeIndex + 1]
+                            origincost = origincost - self.deliverytime[b1.id][c1.id - 1] + self.deliverytime[b2.id][c1.id - 1]
+                        origincost = origincost - self.deliverytime[a1.id][b1.id - 1] + self.deliverytime[a1.id][b2.id - 1]
+
+                        if secondNodeIndex != len(rt2.sequenceOfNodes) - 1:
+                            c2 = rt2.sequenceOfNodes[secondNodeIndex + 1]
+                            targetcost = targetcost + self.deliverytime[b1.id][c2.id - 1] - self.deliverytime[b2.id][c2.id - 1]
+                        targetcost = targetcost + self.deliverytime[a2.id][b1.id - 1] - self.deliverytime[a2.id][b2.id - 1]
+                        if origincost < movereducal and rt2.time + targetcost < inputroutes[maxroute].time:
+                            foundreplacement = True
+                            keeporiginnode = firstNodeIndex
+                            keeptargetnode = secondNodeIndex
+                            targetrtindex = secondRouteIndex
+                            originrtindex = maxroute
+                            keeporigincost = origincost
+                            keeptargetcost = targetcost
+            if foundreplacement == True:
+                rt1 = inputroutes[originrtindex]
+                rt2 = inputroutes[targetrtindex]
+                b1 = rt1.sequenceOfNodes[keeporiginnode]
+                b2 = rt2.sequenceOfNodes[keeptargetnode]
+                rt1.sequenceOfNodes[keeporiginnode] = b2
+                rt2.sequenceOfNodes[keeptargetnode] = b1
+                rt1.time += keeporigincost
+                rt2.time += keeptargetcost
+                rt1.load = rt1.load - b1.demand + b2.demand
+                rt2.load = rt2.load + b1.demand - b2.demand
+        return inputroutes
+
 
     def relocateFromMax(self, relroutes):
         for i in range(0, 100):
@@ -324,6 +440,91 @@ class Solver:
                 targetroute.sequenceOfNodes.insert(keeptargetnode + 1, B)
         return relroutes
 
+    def swapMoveAllChanges(self, route_of_max_cost, sol):
+
+        rt1: Route = route_of_max_cost
+        for second_route in range(0, len(sol.routes)):
+            rt2: Route = sol.routes[second_route]
+            for first_route_node in range(1, len(rt1.sequenceOfNodes)):
+                fn = rt1.sequenceOfNodes[first_route_node]
+                startOfSecondNodeIndex = 1
+                if rt1 == rt2:
+                    if first_route_node != len(rt1.sequenceOfNodes) - 1:
+                        startOfSecondNodeIndex = first_route_node + 1
+                    else:
+                        break
+                for second_route_node in range(startOfSecondNodeIndex, len(rt2.sequenceOfNodes)):
+                    sn = rt2.sequenceOfNodes[second_route_node]
+                    A = rt1.sequenceOfNodes[first_route_node - 1]
+                    if first_route_node == len(rt1.sequenceOfNodes) - 1:
+                        B = fn
+                    else:
+                        B = rt1.sequenceOfNodes[first_route_node + 1]
+                    C = rt2.sequenceOfNodes[second_route_node - 1]
+                    if second_route_node == len(rt2.sequenceOfNodes) - 1:
+                        D = sn
+                    else:
+                        D = rt2.sequenceOfNodes[second_route_node + 1]
+                    rt1_removed_demand = fn.demand
+                    rt1_added_demand = sn.demand
+                    rt2_removed_demand = sn.demand
+                    rt2_added_demand = fn.demand
+                    if rt1 == rt2:
+                        rt1_removed_demand = fn.demand + sn.demand
+                        rt1_added_demand = fn.demand + sn.demand
+                        rt2_removed_demand = fn.demand + sn.demand
+                        rt2_added_demand = fn.demand + sn.demand
+                    rt1_capacity = rt1.capacity - rt1_removed_demand + rt1_added_demand
+                    rt2_capacity = rt2.capacity - rt2_removed_demand + rt2_added_demand
+                    rt1_load = rt1.load - rt1_removed_demand + rt1_added_demand
+                    rt2_load = rt2.load - rt2_removed_demand + rt2_added_demand
+                    if rt1_capacity + rt1_load == 3000 and rt2_capacity + rt2_load == 3000:
+                        rt1_cost_before = rt1.time
+                        rt_cost_after = rt1_cost_before
+                        if rt1 == rt2:
+                            rt_cost_before = rt1.time
+                            if first_route_node < second_route_node and B.id == sn.id and C.id == fn.id:
+                                rt_removed_cost = self.distanceMatrix[A.id][fn.id] + self.distanceMatrix[sn.id][
+                                    D.id] + self.distanceMatrix[fn.id][sn.id]
+                                rt_added_cost = self.distanceMatrix[A.id][sn.id] + self.distanceMatrix[fn.id][
+                                    D.id] + self.distanceMatrix[sn.id][fn.id]
+                                rt_cost_after = rt_cost_before - rt_removed_cost + rt_added_cost
+                                rt1_cost_after = rt_cost_after
+                                rt2_cost_after = rt_cost_after
+                            # if first_route_node > second_route_node and A.id == sn.id and D.id == fn.id:
+                            #     rt_removed_cost = self.distanceMatrix[C.id][sn.id] + self.distanceMatrix[fn.id][B.id]
+                            #     rt_added_cost = self.distanceMatrix[C.id][fn.id] + self.distanceMatrix[sn.id][B.id]
+                            #     rt_cost_after = rt_cost_before - rt_removed_cost + rt_added_cost
+                            #     rt1_cost_after = rt_cost_after
+                            #     rt2_cost_after = rt_cost_after
+                        else:
+                            rt1_removed_cost = self.distanceMatrix[A.id][fn.id] + self.distanceMatrix[fn.id][B.id]
+                            rt1_added_cost = self.distanceMatrix[A.id][sn.id] + self.distanceMatrix[sn.id][B.id]
+                            rt1_cost_after = rt1_cost_before - rt1_removed_cost + rt1_added_cost
+                            rt2_cost_before = rt2.time
+                            rt2_removed_cost = self.distanceMatrix[C.id][sn.id] + self.distanceMatrix[sn.id][D.id]
+                            rt2_added_cost = self.distanceMatrix[C.id][fn.id] + self.distanceMatrix[fn.id][D.id]
+                            rt2_cost_after = rt2_cost_before - rt2_removed_cost + rt2_added_cost
+                        if rt1_cost_before > rt1_cost_after > rt2_cost_after or rt_cost_after < rt1_cost_before:
+                            for i in range(len(sol.routes)):
+
+                                if sol.routes[i] == rt1:
+                                    sol.routes[i].sequenceOfNodes[first_route_node] = sn
+                                    sol.routes[i].cost = rt1_cost_after
+                                    sol.routes[i].capacity = sol.routes[
+                                                                      i].capacity - rt1_removed_demand + rt1_added_demand
+                                    sol.routes[i].load = sol.routes[
+                                                                  i].load - rt1_removed_demand + rt1_added_demand
+                                if sol.routes[i] == rt2:
+                                    sol.routes[i].sequenceOfNodes[second_route_node] = fn
+                                    sol.routes[i].cost = rt2_cost_after
+                                    sol.routes[i].capacity = sol.routes[
+                                                                      i].capacity - rt2_removed_demand + rt2_added_demand
+                                    sol.routes[i].load = sol.routes[
+                                                                  i].load - rt2_removed_demand + rt2_added_demand
+        return sol
+
+
     def twoOpt(self, routesgiven):
         tryingroutes = routesgiven.copy()
         newroutes = []
@@ -359,8 +560,97 @@ class Solver:
             newroutes.append(existing_route)
         return newroutes
 
+# MAIN
 
-        """
+drawer = SolDrawer()
+
+
+def localSearchApplier(latestsol, method):
+    if method == "2opt":
+        twopt = Solution()
+        twopt.routes = s.twoOpt(copy.deepcopy(latestsol.routes))
+        solutionCostComputer(twopt)
+        drawer.draw("2opt_fig", twopt, m.all_nodes)
+        latestsol = copy.deepcopy(twopt)
+        return latestsol
+
+    elif method == "relocation":
+        rl_sol = Solution()
+        rl_sol.routes = s.relocateFromMax(copy.deepcopy(latestsol.routes))
+        solutionCostComputer(rl_sol)
+        drawer.draw("rel_fig", rl_sol, m.all_nodes)
+        latestsol = copy.deepcopy(rl_sol)
+        return latestsol
+
+    elif method == "swapmax":
+        sol_swapmax = Solution()
+        sol_swapmax.routes = s.swapLocalSearch(copy.deepcopy(latestsol.routes))
+        solutionCostComputer(sol_swapmax)
+        drawer.draw("swapmax_fig", sol_swapmax, m.all_nodes)
+        latestsol = copy.deepcopy(sol_swapmax)
+        return latestsol
+
+    elif method == "swapall":
+        for i in range(400):
+            maxroute = findMaxRoute(latestsol)
+            latestsol = s.swapMoveAllChanges(maxroute, copy.deepcopy(latestsol))
+        solutionCostComputer(latestsol)
+        drawer.draw("swapall_fig", latestsol, m.all_nodes)
+        return latestsol
+
+
+
+def findMaxRoute(sol1):
+    times = []
+    for route in sol1.routes:
+        times.append(s.calculateRouteTime(route))
+    sol1.cost = max(times)
+    ind = (times.index(max(times)))
+    return sol1.routes[ind]
+
+def solutionCostComputer(sol):
+    times = []
+    for route in sol.routes:
+        times.append(s.calculateRouteTime(route))
+    sol.cost = max(times)
+    ind = (times.index(max(times)))
+    print(sol.cost, ind + 1, len(times))
+
+m = Model()
+m.BuildModel()
+s = Solver(m)
+sol = Solution()
+sol.routes = s.sweepMethod("nearest")
+solutionCostComputer(sol)
+drawer.draw("base", sol, m.all_nodes)
+latestsol = copy.deepcopy(sol)
+#testsol(latestsol.routes, m)
+latestsol = localSearchApplier(latestsol, "2opt")
+#testsol(latestsol.routes, m)
+#latestsol = localSearchApplier(latestsol, "relocation")
+#testsol(latestsol.routes, m)
+latestsol = localSearchApplier(latestsol, "swapmax")
+#testsol(latestsol.routes, m)
+
+
+
+"""
+
+import sys
+def prt_width(myint):
+    sys.stdout.write('|' + str(myint) + '|' + ' '*(3 - len(str(myint))) + '  ')
+    sys.stdout.flush()
+
+for node in all_nodes:
+    prt_width(node.id)
+    prt_width(node.x)
+    prt_width(node.y)
+    prt_width(node.demand)
+    prt_width(node.type)
+    print('\n')
+
+
+
         loo = 0
         times = []
 
@@ -377,72 +667,7 @@ class Solver:
         print(len(routes))
         print(loo)
         print(max(times))
-        """
 
-
-m = Model()
-m.BuildModel()
-s = Solver(m)
-sol = Solution()
-sol.routes = s.sweepMethod()
-
-"""
-i = 1
-for route in sol.routes:
-    print("route", i, "   ", route.load, route.time)
-    for node in route.sequenceOfNodes:
-        print(node.id)
-    i += 1
-"""
-
-timesold = []
-for route in sol.routes:
-    timesold.append(s.calculateRouteTime(route))
-    #print(route.time)
-sol.cost = max(timesold)
-print(sol.cost)
-
-new_sol = Solution()
-new_sol.routes = s.twoOpt(sol.routes)
-rl_sol = Solution()
-rl_sol.routes = s.relocateFromMax(copy.deepcopy(new_sol.routes))
-
-times = []
-for newroute in new_sol.routes:
-    #for nodes in newroute.sequenceOfNodes:
-        #print(nodes.id)
-    #print("route time", route.time)
-    #print(s.calculateRouteTime(route))
-    tim = newroute.time
-    #print("time new route", tim)
-    times.append(tim)
-new_sol.cost = max(times)
-print(new_sol.cost)
-
-"""
-i = 1
-for route in new_sol.routes:
-    print("route", i, "   ", route.load, route.time)
-    for node in route.sequenceOfNodes:
-        print(node.id)
-    i +=1
-"""
-rltimes = []
-for route in rl_sol.routes:
-    rltimes.append(s.calculateRouteTime(route))
-    #print(route.time)
-rl_sol.cost = max(rltimes)
-print(rl_sol.cost)
-
-drawer = SolDrawer()
-drawer.draw("fig1", sol, m.all_nodes)
-drawer.draw("fig2", new_sol, m.all_nodes)
-drawer.draw("fig 3", rl_sol, m.all_nodes)
-
-
-
-
-"""
 
 
 
@@ -458,4 +683,41 @@ for node in anglingNodes:
     prt_width(node.demand)
     prt_width(node.type)
     print('\n')
+"""
+
+"""
+new_sol = Solution()
+new_sol.routes = s.twoOpt(sol.routes)
+
+times = []
+for newroute in new_sol.routes:
+    #for nodes in newroute.sequenceOfNodes:
+        #print(nodes.id)
+    #print("route time", route.time)
+    #print(s.calculateRouteTime(route))
+    tim = newroute.time
+    print(newroute.sequenceOfNodes[1].id)
+    #print("time new route", tim)
+    times.append(tim)
+new_sol.cost = max(times)
+ind = (times.index(max(times)))
+print(new_sol.cost, ind+1, len(times))
+
+
+i = 1
+for route in new_sol.routes:
+    print("route", i, "   ", route.load, route.time)
+    for node in route.sequenceOfNodes:
+        print(node.id)
+    i +=1
+
+rltimes = []
+for route in rl_sol.routes:
+    rltimes.append(s.calculateRouteTime(route))
+    #print(route.sequenceOfNodes[1].id)
+
+    #print(route.time)
+rl_sol.cost = max(rltimes)
+ind = (rltimes.index(max(rltimes)))
+print(rl_sol.cost, ind+1, len(rltimes))
 """
