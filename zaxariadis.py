@@ -296,8 +296,6 @@ class Solver:
 
 
 
-
-
     def calculateRouteTime(self, route):
         caltime = 0
         nodid=[]
@@ -322,6 +320,89 @@ class Solver:
             ri += 1
         return route
 
+    def createRTs(self, rt1, rt2, ind1, ind2, routetoreturn):
+        routetobertrnd = Route(self.depot, 3000)
+        if (routetoreturn == 1):
+            for i in range(0, ind1):
+                node = rt1.sequenceOfNodes[i+1]
+                routetobertrnd.sequenceOfNodes.append(node)
+            for j in range(ind2+1, len(rt2.sequenceOfNodes)):
+                node = rt2.sequenceOfNodes[j]
+                routetobertrnd.sequenceOfNodes.append(node)
+        if (routetoreturn == 2):
+            for i in range(0, ind2):
+                node = rt2.sequenceOfNodes[i + 1]
+                routetobertrnd.sequenceOfNodes.append(node)
+            for j in range(ind1 + 1, len(rt1.sequenceOfNodes)):
+                node = rt1.sequenceOfNodes[j]
+                routetobertrnd.sequenceOfNodes.append(node)
+        return routetobertrnd
+
+
+    def calculateLoad(self, route):
+        load = 0
+        for node in route.sequenceOfNodes:
+            load += node.demand
+        return load
+
+
+    def twoOptMove(self, routes):
+        minmovecost=0
+        for rt1ind in range(0, len(routes)):
+            rt1 = routes[rt1ind]
+            for rt2ind in range(rt1ind, len(routes)):
+                rt2 = routes[rt2ind]
+                for node1ind in range(1, len(rt1.sequenceOfNodes)- 1):
+                    start2 = 0
+                    # if (rt1 == rt2):
+                    #     start2 = node1ind + 2
+                    for node2ind in range(start2, len(rt2.sequenceOfNodes)-1):
+                        moveCost = 200402030400
+                        A = rt1.sequenceOfNodes[node1ind]
+                        B = rt1.sequenceOfNodes[node1ind + 1]
+                        K = rt2.sequenceOfNodes[node2ind]
+                        L = rt2.sequenceOfNodes[node2ind + 1]
+
+                        if (rt1 == rt2):
+                            if node1ind == 0 and node2ind == len(rt1.sequenceOfNodes) - 2:
+                                continue
+                            costAdded = self.distanceMatrix[A.id][K.id] + self.distanceMatrix[B.id][L.id]
+                            costRemoved = self.distanceMatrix[A.id][B.id] + self.distanceMatrix[K.id][L.id]
+                            moveCost = costAdded - costRemoved
+
+                        if (rt1 !=rt2):
+                            if node1ind==0 and node2ind==0:
+                                continue
+                            if node1ind==len(rt1.sequenceOfNodes)-2 and node2ind==len(rt2.sequenceOfNodes)-2:
+                                continue
+                            newrt1 = self.createRTs(rt1, rt2, node1ind,node2ind,1)
+                            newrt2 = self.createRTs(rt1, rt2, node1ind,node2ind,2)
+                            newrt1.load = self.calculateLoad(newrt1)
+                            newrt2.load = self.calculateLoad(newrt2)
+                            if (newrt1.load <= 3000 and newrt2.load <= 3000):
+                                costAdded = self.distanceMatrix[A.id][L.id] + self.distanceMatrix[K.id][B.id]
+                                costRemoved = self.distanceMatrix[A.id][B.id] + self.distanceMatrix[K.id][L.id]
+                                moveCost = costAdded - costRemoved
+
+                        if (moveCost < 0 and abs(moveCost) > 0.0001):
+
+                            if rt1 != rt2 :
+                                newrt1.time = self.calculateRouteTime(newrt1)
+                                newrt2.time = self.calculateRouteTime(newrt2)
+                                routes[rt1ind]=newrt1
+                                routes[rt2ind]=newrt2
+
+                            # if rt1 ==rt2 :
+                            #     rt1.time += moveCost
+                            #     routes[rt1ind] = self.twoOptSwap(rt1, node1ind, node2ind)
+
+
+
+
+
+
+
+
 
     def calcroutecost(self, rt):
         routecost = 0
@@ -332,7 +413,7 @@ class Solver:
         return routecost
 
     def swapLocalSearch(self, inputroutes):
-        for i in range(0, 200):
+        for i in range(0, 10):
             maxroute = 0
             maxvalue = 0
             for i in range(0, len(inputroutes)):
@@ -392,7 +473,7 @@ class Solver:
 
 
     def relocateFromMax(self, relroutes):
-        for i in range(0, 100):
+        for i in range(0, 1):
             maxroute = 0
             maxvalue = 0
             for i in range(0, len(relroutes)):
@@ -412,15 +493,15 @@ class Solver:
                     for targetNodeIndex in range(0, len(rt2.sequenceOfNodes)):
                         A = relroutes[maxroute].sequenceOfNodes[originNodeIndex - 1]
                         B = relroutes[maxroute].sequenceOfNodes[originNodeIndex]
-                        origincost = - self.dist_matrix[A.id][B.id]
+                        origincost = - self.distanceMatrix[A.id][B.id]
                         if originNodeIndex != len(relroutes[maxroute].sequenceOfNodes) - 1:
                             C = relroutes[maxroute].sequenceOfNodes[originNodeIndex + 1]
-                            origincost = - self.dist_matrix[A.id][B.id] - self.dist_matrix[B.id][C.id] + self.dist_matrix[A.id][C.id]
+                            origincost = - self.distanceMatrix[A.id][B.id] - self.distanceMatrix[B.id][C.id] + self.distanceMatrix[A.id][C.id]
                         F = rt2.sequenceOfNodes[targetNodeIndex]
-                        targetcost = self.dist_matrix[F.id][B.id]
+                        targetcost = self.distanceMatrix[F.id][B.id]
                         if targetNodeIndex != len(rt2.sequenceOfNodes) - 1:
                             G = rt2.sequenceOfNodes[targetNodeIndex + 1]
-                            targetcost = self.dist_matrix[F.id][B.id] + self.dist_matrix[B.id][G.id] - self.dist_matrix[F.id][G.id]
+                            targetcost = self.distanceMatrix[F.id][B.id] + self.distanceMatrix[B.id][G.id] - self.distanceMatrix[F.id][G.id]
                         if origincost < movereducal and rt2.time + targetcost < relroutes[maxroute].time:
                             foundreplacement = not foundreplacement
                             keeporiginnode = originNodeIndex
@@ -560,6 +641,7 @@ class Solver:
             newroutes.append(existing_route)
         return newroutes
 
+
 # MAIN
 
 drawer = SolDrawer()
@@ -570,7 +652,7 @@ def localSearchApplier(latestsol, method):
         twopt = Solution()
         twopt.routes = s.twoOpt(copy.deepcopy(latestsol.routes))
         solutionCostComputer(twopt)
-        drawer.draw("2opt_fig", twopt, m.all_nodes)
+        drawer.draw("opt2_fig", twopt, m.all_nodes)
         latestsol = copy.deepcopy(twopt)
         return latestsol
 
@@ -598,6 +680,16 @@ def localSearchApplier(latestsol, method):
         drawer.draw("swapall_fig", latestsol, m.all_nodes)
         return latestsol
 
+    elif method == "two opt":
+        s.twoOptMove(latestsol.routes)
+        drawer.draw("twooptmovefig", latestsol, m.all_nodes)
+        solutionCostComputer(latestsol)
+        return latestsol
+
+
+
+
+
 
 
 def findMaxRoute(sol1):
@@ -610,11 +702,14 @@ def findMaxRoute(sol1):
 
 def solutionCostComputer(sol):
     times = []
+    load = []
     for route in sol.routes:
         times.append(s.calculateRouteTime(route))
+        load.append(route.load)
+        print(times[-1], load[-1], route.sequenceOfNodes[1].id, route.sequenceOfNodes[-1].id)
     sol.cost = max(times)
     ind = (times.index(max(times)))
-    print(sol.cost, ind + 1, len(times))
+    print("ROUTE MAX", sol.cost, ind + 1, len(times))
 
 m = Model()
 m.BuildModel()
@@ -625,14 +720,16 @@ solutionCostComputer(sol)
 drawer.draw("base", sol, m.all_nodes)
 latestsol = copy.deepcopy(sol)
 #testsol(latestsol.routes, m)
-latestsol = localSearchApplier(latestsol, "2opt")
+#latestsol = localSearchApplier(latestsol, "2opt")
 #testsol(latestsol.routes, m)
 #latestsol = localSearchApplier(latestsol, "relocation")
 #testsol(latestsol.routes, m)
-latestsol = localSearchApplier(latestsol, "swapmax")
+#latestsol = localSearchApplier(latestsol, "swapmax")
 #testsol(latestsol.routes, m)
+latestsol = localSearchApplier(latestsol, "two opt")
 
 
+print("0-25-73", m.deliverytime[0][24] + m.deliverytime[25][72], "0-73", m.deliverytime[0][72])
 
 """
 
