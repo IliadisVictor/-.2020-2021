@@ -4,7 +4,7 @@ import random
 import copy
 import matplotlib.pyplot as plt
 
-
+# Hello
 class Solution:
     def __init__(self):
         self.cost = 0.0
